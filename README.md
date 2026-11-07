@@ -14,6 +14,8 @@ You can start with:
 
 Your agent checks your machine and client, installs the project, generates your own local credentials, configures MCP, and tests the connection. Phone setup and Android installation can then be handled by the same agent. You do not need to manually fill in the author's paths or configure another model API key for the classroom.
 
+[Download the release package or Android APK](https://github.com/lsx12138/evolution-classroom/releases/latest). The APK has no preconfigured server or credentials; your agent still deploys your own computer's service. Source builds are available for users who want their own signing key.
+
 **中文使用方式：**下载项目或把仓库地址交给自己的桌面 Agent，让它阅读根目录的英文 `AGENT_SETUP_PROMPT.md` 并按提示部署。Agent 会检查环境、安装依赖、配置 MCP 和验证收发；需要手机使用时，再由它配置你自己的 Tailscale 和安装 Android App。
 
 ## What it does
