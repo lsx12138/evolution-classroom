@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer"><title>进化课堂 · 白板与老师</title>
+  <link rel="stylesheet" href="classroom.css">
+  <script src="markdown-it.min.js" defer></script><script src="classroom.js" defer></script>
+</head>
+<body>
+  <header class="topbar"><div class="identity"><span class="brand">进化课堂</span><span id="room-title">共享白板</span></div><button id="toggle-chat" aria-expanded="false" aria-controls="conversation">问老师 <span id="unread" hidden>新回复</span></button></header>
+  <main>
+    <section class="board"><iframe id="whiteboard" title="教学白板"></iframe></section>
+    <aside id="conversation" aria-label="与课堂老师对话">
+      <div class="teacher-header"><div class="teacher-choice"><label for="teacher">当前老师</label><select id="teacher" aria-label="选择已加入的老师"><option value="">等待老师加入</option></select><button id="fullscreen-chat" type="button" aria-label="全屏聊天" aria-pressed="false">全屏</button></div><div id="connection" role="status" data-state="loading">连接电脑中</div></div>
+      <div id="notice" role="status" hidden></div>
+      <div id="messages" role="log" aria-live="polite" aria-label="课堂消息"><div class="welcome"><span class="welcome-symbol">↗</span><h1>在白板旁边，直接问。</h1><p>老师的回答和板书都留在这里。<br>手机只需保持 Tailscale 连接。</p></div></div>
+      <form id="composer"><label class="sr-only" for="question">给老师发消息</label><textarea id="question" rows="3" maxlength="12000" placeholder="哪里没懂？直接问老师…"></textarea><div class="compose-footer"><span id="delivery-status">消息进入老师当前的原对话</span><button type="submit" id="send" disabled>发送</button></div></form>
+    </aside>
+  </main>
+</body></html>

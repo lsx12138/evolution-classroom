@@ -1,0 +1,24 @@
+{
+  "name": "evolution-classroom",
+  "version": "0.1.0",
+  "private": true,
+  "description": "An agent-controlled classroom: shared whiteboard, object annotations and original-desktop-chat bridge.",
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "init": "node scripts/init.mjs",
+    "start": "node mobile-gateway.mjs",
+    "start:background": "node scripts/start-local.mjs",
+    "doctor": "node scripts/doctor.mjs",
+    "test": "node --test chat/*.test.mjs tests/*.test.mjs",
+    "test:smoke": "node tests/smoke.mjs",
+    "build:android": "python android/build.py"
+  },
+  "dependencies": {
+    "@ansuman-shukla/whiteboard-mcp": "0.3.5",
+    "@modelcontextprotocol/sdk": "1.32.2"
+  }
+}

@@ -1,0 +1,17 @@
+node_modules/
+state/
+logs/
+workspace/
+exports/
+android/build/
+android/dist/
+android/signing/
+__pycache__/
+*.pyc
+.env
+.env.*
+*.p12
+*.jks
+*.keystore
+keystore-password.txt
+.DS_Store

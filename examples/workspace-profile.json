@@ -1,0 +1,8 @@
+{
+  "subjects": {
+    "math": "subjects/math",
+    "physics": "subjects/physics"
+  },
+  "overviewFile": "CURRENT.md",
+  "recordFile": "records.md"
+}

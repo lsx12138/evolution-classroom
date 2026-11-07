@@ -1,0 +1,20 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {mkdtemp,mkdir,writeFile,readFile,rm} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+import {join,resolve,dirname,basename} from 'node:path';
+import {StudyStore} from '../workspace-store.mjs';
+test('custom subject profile shares files, protects revisions and excludes hidden answers',async t=>{
+ const base=await mkdtemp(join(tmpdir(),'classroom-profile-')),subject=join(base,'subjects/physics');await mkdir(subject,{recursive:true});
+ t.after(async()=>{assert.equal(dirname(resolve(base)),resolve(tmpdir()));assert.ok(basename(base).startsWith('classroom-profile-'));await rm(base,{recursive:true,force:true});});
+ for(const name of ['AGENTS.md','CURRENT.md'])await writeFile(join(base,name),'# Fixture\n');
+ await writeFile(join(subject,'CURRENT.md'),'# Physics task\n');await writeFile(join(subject,'records.md'),'# Evidence\n');
+ const store=new StudyStore(base,join(base,'state'),{subjects:{physics:'subjects/physics'},overviewFile:'CURRENT.md',recordFile:'records.md'});
+ const before=await store.context('physics');assert.equal(before.subjects.physics.current.content,'# Physics task\n');
+ await store.update({subject:'physics',expected_revision:before.subjects.physics.current.revision,content:'# New physics task\n'});
+ await assert.rejects(store.update({subject:'physics',expected_revision:before.subjects.physics.current.revision,content:'# Stale\n'}),/STALE_REVISION/);
+ await store.append({subject:'physics',request_id:'physics-fixture-01',student_evidence:'Synthetic fixture',summary:'Test only',source:'desktop'});
+ assert.match(await readFile(join(subject,'records.md'),'utf8'),/Synthetic fixture/);
+ await assert.rejects(store.read('subjects/physics/_answers/secret.md'));
+ await assert.rejects(store.read('../README.md'));
+});
