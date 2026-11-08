@@ -20,6 +20,7 @@ export class StudyStore {
     this.subjects=options.subjects||subjects;
     this.overviewFile=options.overviewFile||'00_统筹规划/进度记录/CURRENT.md';
     this.recordFile=options.recordFile||'学习记录.md';
+    this.teachingFiles={profile:options.profileFile||'PROFILE.md',mode:options.teachingModeFile||'TEACHING.md'};
     for(const folder of Object.values(this.subjects))if(typeof folder!=='string'||folder.startsWith('/')||folder.includes('\\')||folder.split('/').some(p=>!p||p==='..'||p.startsWith('_')))throw Error('Invalid subject folder');
     if(!/^[^/\\]+\.md$/.test(this.recordFile))throw Error('Invalid record filename');
   }
@@ -35,7 +36,7 @@ export class StudyStore {
   }
   async path(file) {
     if (typeof file !== 'string' || file.includes('\\') || file.includes('\0') || file.split('/').some(p => p === '..' || p.startsWith('_'))) throw new Error('不允许的文件路径');
-    const fixed = ['README.md', 'AGENTS.md', this.overviewFile];
+    const fixed = ['README.md', 'AGENTS.md', this.overviewFile,...Object.values(this.teachingFiles)];
     const eligible = fixed.includes(file) || (file.endsWith('.md')&&Object.values(this.subjects).some(folder=>file.startsWith(folder+'/')));
     if (!eligible || /(?:^|\/)(node_modules|state|板书)(?:\/|$)/.test(file)) throw new Error('仅允许读取教学 Markdown；答案保管件不开放');
     const candidate = await realpath(resolve(this.workspace, file));
@@ -58,7 +59,13 @@ export class StudyStore {
       overview: await this.read(this.overviewFile),
       subjects: {},
       guidance: '先核对本科 CURRENT 与最新记录，再接课。白板使用同一个 lesson 或通过实际 board ID 打开。课后写真实记录，再按新 revision 更新当前任务；失联时不得假称写入成功。',
+      teaching_tools_guide:'docs/TEACHING_TOOLS.md (in the application source, outside the learning workspace)',
+      teaching_context:{},
     };
+    for(const [key,path] of Object.entries(this.teachingFiles)){
+      try{result.teaching_context[key]=await this.read(path);}
+      catch(error){if(error.code!=='ENOENT')throw error;result.teaching_context[key]={path,status:'missing'};}
+    }
     for (const key of selected) {
       const folder = this.folder(key);
       const records = await this.read(`${folder}/${this.recordFile}`);
