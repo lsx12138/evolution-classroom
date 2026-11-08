@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="referrer" content="no-referrer">
+<title>课堂工具箱</title><link rel="stylesheet" href="style.css"><script src="mathlive/mathlive.min.js" defer></script><script src="app.js" defer></script></head>
+<body>
+<header><h1>课堂工具箱</h1><span>答题与函数探索</span><button id="refresh" type="button">刷新老师的题目</button></header>
+<main>
+<nav aria-label="工具"><button id="tab-answer" class="active" aria-selected="true">完整题作答</button><button id="tab-graph" aria-selected="false">动态函数图</button></nav>
+<div id="status" role="status" aria-live="polite"></div>
+<section id="answer-panel">
+<label>当前题目<select id="activity-select"><option value="">选择老师准备的题目</option></select></label>
+<div id="activity" hidden>
+<p id="purpose"></p><h2 id="skill"></h2><p id="prompt"></p><math-field id="question-formula" read-only></math-field>
+<form id="answer-form"><label for="answer">你的完整思路或答案</label><textarea id="answer" rows="5" placeholder="可以用文字或下方公式输入；先独立尝试，不必逐句等提示。" maxlength="12000"></textarea>
+<label for="math-answer">公式输入（可选）</label><math-field id="math-answer" aria-label="数学公式答案"></math-field>
+<label>这题对你来说<select id="feeling"><option value="unspecified">暂不评价</option><option value="too_easy">太简单</option><option value="suitable">合适</option><option value="too_hard">太难</option></select></label>
+<button type="submit" id="submit-answer">提交给答题卡</button><p class="note">提交会保存原答。完成后在原课堂告诉老师“我已提交”，老师再查看和反馈。</p></form>
+<section id="feedback" hidden><h3>老师的反馈</h3><p id="feedback-text"></p></section>
+</div>
+<p id="answer-empty">老师用课堂工具准备题目后，会出现在这里。</p>
+</section>
+<section id="graph-panel" hidden>
+<label>当前函数图<select id="graph-select"><option value="">选择老师准备的图形</option></select></label>
+<div id="graph-content" hidden><h2 id="graph-title"></h2><p id="expressions"></p>
+<div id="sliders"></div><div class="graph-controls"><button id="show-local" type="button">本机函数图</button><button id="show-geogebra" type="button">GeoGebra精细探索</button></div>
+<canvas id="plot" aria-label="动态函数图，参数可由滑块改变"></canvas><div id="ggb-element" hidden></div>
+<p class="note">采样曲线用于观察，端点和定义域须按数学条件判断。参数改变不会自动记为掌握。</p></div>
+</section>
+</main>
+</body></html>

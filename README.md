@@ -28,11 +28,13 @@ Your agent checks your machine and client, installs the project, generates your 
 - **Shared study files:** one local source of truth, evidence-based append-only learning records and revision-checked current-task updates. Subject folders are configurable.
 - **Saving and export:** live boards persist locally; named snapshots preserve a lesson, and `.excalidraw` exports stay editable. PNG export requires an active board viewer.
 
+Six teaching tools and faster whiteboard controls are available in [version 0.2.0](CHANGELOG.md): complete-question activities, teacher mathematics checks, interactive function plots, formula input and Anki text export. Read [TEACHING_TOOLS.md](docs/TEACHING_TOOLS.md) for optional Python setup, mouse shortcuts and upgrade steps. Android 0.2.2 includes the updated whiteboard frontend.
+
 ## Compatibility: tools and chat are different
 
 The initial installation was tested on Windows with **Codex desktop, PI-Desktop, MiniMax Code desktop and Antigravity**, including real Android question/reply tests. This public package needs to be verified on each new installation; the setup prompt directs the agent to do that.
 
-The local MCP server exposes **19 tools**. The authenticated remote HTTP MCP exposes **15 whiteboard/study tools**; it does not register a remote agent as a local original-chat owner. An MCP-capable client may use drawing/study tools without having an original-conversation adapter.
+The local MCP server exposes **25 tools**. The authenticated remote HTTP MCP exposes **21 whiteboard/study/teaching tools**; it does not register a remote agent as a local original-chat owner. An MCP-capable client may use drawing/study tools without having an original-conversation adapter.
 
 Desktop adapters use version-sensitive local interfaces. Codex's current adapter is pinned to one inspected Windows Store package; Antigravity is pinned to 2.29.0. Unknown versions may be rejected intentionally. **Claude Desktop original-chat delivery is not implemented.** These are community integrations, not vendor-supported APIs. See [COMPATIBILITY.md](docs/COMPATIBILITY.md).
 
@@ -64,11 +66,12 @@ For phones, initialize with your own HTTPS origin, for example `--public-origin 
 ```text
 AGENT_SETUP_PROMPT.md    Copyable English deployment prompt
 AGENTS.md               Agent rules for this project
-classroom-mcp.mjs       Local MCP entrypoint (19 tools)
+classroom-mcp.mjs       Local MCP entrypoint (25 tools)
 mobile-gateway.mjs      Authenticated gateway and remote MCP
 whiteboard.mjs          Shared board CLI
 chat/                   Original-chat adapters and classroom UI
 android/                Android application source and local build script
+teaching-kit/           Mathematics, activities, graphs, formula input and review cards
 scripts/                Initialization, startup and diagnostics
 docs/                   Integration, compatibility and mobile notes
 state/                  Generated private runtime data (never committed)

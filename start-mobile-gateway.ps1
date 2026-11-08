@@ -56,7 +56,7 @@ try {
 
     $health = Get-StudyHealth $gatewayUrl
     if ($health -and $health.app -ne 'study-whiteboard-gateway') { throw '本地入口端口被其他服务占用。' }
-    if ($health -and $health.app -eq 'study-whiteboard-gateway' -and $health.version -ne '1.3.1') {
+    if ($health -and $health.app -eq 'study-whiteboard-gateway' -and $health.version -ne '1.4.0') {
         throw '已有旧版本入口正在运行。先双击“停止手机入口.cmd”，再启动。'
     }
     if (-not $health -or -not $health.ok) {
@@ -91,9 +91,9 @@ try {
 
     $accessToken = [IO.File]::ReadAllText((Join-Path $stateDir 'token')).Trim()
     $toolsResult = Invoke-RestMethod -Uri ($gatewayConfig.publicOrigin + '/agent/tools') -Headers @{Authorization=('Bearer ' + $accessToken)} -TimeoutSec 10
-    if ($toolsResult.tools.Count -ne 15) { throw '远程工具数量与预期不符，需要检查版本。' }
+    if ($toolsResult.tools.Count -ne 21) { throw '远程工具数量与预期不符，需要检查版本。' }
     $setupUrl = $gatewayConfig.publicOrigin + '/mobile/' + $accessToken + '/setup.txt'
-    Write-Output '已就绪：白板、共享学习记录、Tailscale HTTPS、15 个工具。'
+    Write-Output '已就绪：白板、共享学习记录、Tailscale HTTPS、21 个工具。'
     Write-Output ('手机接入说明：' + $setupUrl)
     if ($args -contains '-OpenSetup') { Start-Process -FilePath $setupUrl }
 } finally {

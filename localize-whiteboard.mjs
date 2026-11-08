@@ -14,6 +14,14 @@ const ORIGINAL_HTML_SHA = '2ce4aec18d375b365fb70e9538b670bc8311b2e6d554ac5a9f8aa
 const ORIGINAL_JS_SHA = '27467ab6c225fccba16ec49e34f70f61562d3a2380e53679ebb103398415c05a';
 const sha = value => createHash('sha256').update(value).digest('hex');
 
+// Windows' system font "Segoe UI Emoji" carries a broken character map for some math symbols
+// (√ shows as Ã, ≠ as "-", ∞ as °; the bytes are Mac Roman code points read as Latin-1).
+// Excalidraw puts it LAST in every canvas font stack, and Chrome believes it has those glyphs,
+// so no later font is tried. Re-declaring it here, limited to emoji/pictograph ranges, makes the
+// browser use it only for real emoji; math symbols then fall through to a font that draws them right.
+const GLYPH_FIX_RANGES = 'U+00A9,U+00AE,U+203C,U+2049,U+2122,U+2139,U+2194-21AA,U+231A-23FF,U+24C2,U+25AA-25FE,U+2600-27BF,U+2934-2935,U+2B05-2B55,U+3030,U+303D,U+3297,U+3299,U+FE0F,U+200D,U+20E3,U+1F000-1FAFF,U+E0020-E007F';
+const GLYPH_FIX_STYLE = `<style id="study-glyph-fix">@font-face{font-family:"Segoe UI Emoji";src:local("Segoe UI Emoji");unicode-range:${GLYPH_FIX_RANGES};}</style>\n  </head>`;
+
 function replaceOnce(source, before, after) {
   if (source.split(before).length !== 2) throw new Error(`汉化定位不唯一，已停止：${before}`);
   return source.replace(before, after);
@@ -70,10 +78,11 @@ export function localizeWhiteboard() {
   app = replaceOnce(app, '`${t} viewers on this canvas`', '`当前有 ${t} 个窗口连接此白板`');
   app = replaceOnce(app, '`Saved "${D.name}". Any chat can find it with canvas_search.`', '`已保存“${D.name}”，其他老师可查找这个白板副本。`');
   app = replaceOnce(app, '`Not saved: ${D instanceof Error?D.message:String(D)}`', '`保存失败：${({offline:"白板未连接","connection lost":"连接已中断","timed out":"请求超时","already saving":"正在保存，请稍候"})[D instanceof Error?D.message:String(D)]??(D instanceof Error?D.message:String(D))}`');
-  app = replaceOnce(app, 'function mse(){', 'const __StudyAnnotations=__createAnnotationUI(I,Zp,ie,lt);function mse(){');
-  app = replaceOnce(app, 'p.jsxs(Use,{children:[L,v&&p.jsx(tse,{initialName:U,onSave:M,onClose:w})]})', 'p.jsxs(Use,{children:[L,v&&p.jsx(tse,{initialName:U,onSave:M,onClose:w}),p.jsx(__StudyAnnotations,{api:i,connected:s==="live",onNote:N=>E.current?.sendNote(N)??!1})]})');
+  app = replaceOnce(app, 'function mse(){', 'const __StudyAnnotations=__createAnnotationUI(I,Zp,ie,lt),__StudyMouseTools=__createMouseToolUI(I);function mse(){');
+  app = replaceOnce(app, 'p.jsxs(Use,{children:[L,v&&p.jsx(tse,{initialName:U,onSave:M,onClose:w})]})', 'p.jsxs(Use,{children:[L,v&&p.jsx(tse,{initialName:U,onSave:M,onClose:w}),p.jsx(__StudyAnnotations,{api:i,connected:s==="live",onNote:N=>E.current?.sendNote(N)??!1}),p.jsx(__StudyMouseTools,{api:i})]})');
   const annotationUi = readFileSync(join(ROOT, 'whiteboard-annotations.mjs'), 'utf8');
-  const localizedJs = 'import {createAnnotationUI as __createAnnotationUI} from "./study-annotations.js";\n' + originalJs.slice(0, at) + app;
+  const mouseToolsUi = readFileSync(join(ROOT, 'whiteboard-mouse-tools.mjs'), 'utf8');
+  const localizedJs = 'import {createMouseToolUI as __createMouseToolUI} from "./study-mouse-tools.js";\nimport {createAnnotationUI as __createAnnotationUI} from "./study-annotations.js";\n' + originalJs.slice(0, at) + app;
   const extra = JSON.parse(readFileSync(join(ROOT, 'whiteboard-zh-CN-extra.json'), 'utf8'));
   const originalZh = readFileSync(join(FRONTEND, 'assets', ZH_ENTRY), 'utf8');
   const zhExport = originalZh.match(/export\{[^}]+\};?\s*$/);
@@ -93,10 +102,11 @@ export function localizeWhiteboard() {
   const localizedZh = originalZh.slice(0, zhExport.index) + additions + sectionVars + exports;
   // A new directory gives EVERY relative module import a new URL. This avoids stale
   // immutable assets and duplicate React modules without changing server cache rules.
-  const assetFolder = `zh-CN-${sha(localizedJs + localizedZh + annotationUi).slice(0, 12)}`;
+  const assetFolder = `zh-CN-${sha(localizedJs + localizedZh + annotationUi + mouseToolsUi).slice(0, 12)}`;
   const assetDirectory = `assets/${assetFolder}`;
   let html = replaceOnce(originalHtml, '<html lang="en">', '<html lang="zh-CN">');
   html = replaceOnce(html, '<title>Whiteboard</title>', '<title>教学白板</title>');
+  html = replaceOnce(html, '</head>', GLYPH_FIX_STYLE);
   html = replaceOnce(html, `./assets/${ENTRY}`, `./${assetDirectory}/${ENTRY}`);
   html = replaceOnce(html, `./assets/${STYLE}`, `./${assetDirectory}/${STYLE}`);
   if (currentHtml !== originalHtml && currentHtml !== html && !/<html lang="zh-CN">[\s\S]*\.\/assets\/zh-CN-[a-f0-9]{12}\//.test(currentHtml)) {
@@ -105,7 +115,7 @@ export function localizeWhiteboard() {
   const destination = join(FRONTEND, 'assets', assetFolder);
   const result = { locale: 'zh-CN', upstreamVersion: pkg.version, assetDirectory };
   installAnnotationReadSupport();
-  if (currentHtml === html && existsSync(join(destination, ENTRY)) && existsSync(join(destination, ZH_ENTRY)) && existsSync(join(destination, 'study-annotations.js')) && sha(readFileSync(join(destination, ENTRY))) === sha(localizedJs) && sha(readFileSync(join(destination, ZH_ENTRY))) === sha(localizedZh) && sha(readFileSync(join(destination, 'study-annotations.js'))) === sha(annotationUi)) return result;
+  if (currentHtml === html && existsSync(join(destination, ENTRY)) && existsSync(join(destination, ZH_ENTRY)) && existsSync(join(destination, 'study-annotations.js')) && sha(readFileSync(join(destination, ENTRY))) === sha(localizedJs) && sha(readFileSync(join(destination, ZH_ENTRY))) === sha(localizedZh) && sha(readFileSync(join(destination, 'study-annotations.js'))) === sha(annotationUi) && existsSync(join(destination, 'study-mouse-tools.js')) && sha(readFileSync(join(destination, 'study-mouse-tools.js'))) === sha(mouseToolsUi)) return result;
   mkdirSync(dirname(backup), { recursive: true });
   if (!existsSync(backup)) writeFileSync(backup, originalHtml, 'utf8');
   const originalAssets = readdirSync(join(FRONTEND, 'assets'), { withFileTypes: true }).filter(entry => entry.isFile());
@@ -114,6 +124,7 @@ export function localizeWhiteboard() {
   writeFileSync(join(destination, ENTRY), localizedJs, 'utf8');
   writeFileSync(join(destination, ZH_ENTRY), localizedZh, 'utf8');
   writeFileSync(join(destination, 'study-annotations.js'), annotationUi, 'utf8');
+  writeFileSync(join(destination, 'study-mouse-tools.js'), mouseToolsUi, 'utf8');
   // Original assets remain available to already-open tabs; no board data is edited.
   const temp = htmlPath + '.study-zh.tmp';
   writeFileSync(temp, html, 'utf8');

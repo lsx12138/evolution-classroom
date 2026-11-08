@@ -32,7 +32,7 @@ try{
  assert.ok(healthy,stderr);
  assert.equal((await fetch(origin+'/agent/tools')).status,401);
  assert.equal((await fetch(origin+'/agent/tools',{headers:{...headers,Origin:'https://untrusted.invalid'}})).status,403);
- const tools=await(await fetch(origin+'/agent/tools',{headers})).json();assert.equal(tools.tools.length,15);
+ const tools=await(await fetch(origin+'/agent/tools',{headers})).json();assert.equal(tools.tools.length,21);
  async function call(name,args={}){const r=await fetch(origin+'/agent/call',{method:'POST',headers,body:JSON.stringify({name,arguments:args,lesson:'smoke'})});assert.equal(r.status,200);const d=await r.json();assert.ok(!d.isError,JSON.stringify(d));return d;}
  const context=await call('study_context',{subject:'math'});assert.match(context.structuredContent.subjects.math.current.content,/Awaiting/);
  const evidence={subject:'math',request_id:'synthetic-smoke-0001',student_evidence:'Synthetic test fixture',summary:'Not a real learning record',source:'desktop'};
@@ -50,13 +50,19 @@ try{
  await call('canvas_save',{name:'Synthetic snapshot'});
  local=new Client({name:'isolated-smoke',version:'1'});
  const transport=new StdioClientTransport({command:process.execPath,args:[join(root,'classroom-mcp.mjs')],cwd:root,env,stderr:'pipe'});transport.stderr?.on('data',()=>{});
- await local.connect(transport);assert.equal((await local.listTools()).tools.length,19);
+ await local.connect(transport);assert.equal((await local.listTools()).tools.length,25);
  assert.ok(!(await local.callTool({name:'classroom_status',arguments:{}})).isError);
  assert.match(JSON.stringify(await local.callTool({name:'canvas_read',arguments:{lesson:'smoke'}})),/Portable classroom smoke fixture/);
  remote=new Client({name:'isolated-remote-smoke',version:'1'});
- await remote.connect(new StreamableHTTPClientTransport(new URL(origin+'/mcp'),{requestInit:{headers}}));assert.equal((await remote.listTools()).tools.length,15);
+ await remote.connect(new StreamableHTTPClientTransport(new URL(origin+'/mcp'),{requestInit:{headers}}));assert.equal((await remote.listTools()).tools.length,21);
  assert.ok(!(await remote.callTool({name:'study_context',arguments:{subject:'math'}})).isError);
- console.log(JSON.stringify({ok:true,freshInitialization:true,uniqueCredentials:true,credentialPreserved:true,localMcpTools:19,remoteMcpTools:15,authenticatedGateway:true,sharedStudyFiles:true,appendRetryDedup:true,pathIsolation:true,liveWhiteboard:true,websocketRoundTrip:true,snapshot:true,realDesktopMessageSent:false}));
+ const math=await remote.callTool({name:'math_verify',arguments:{operation:'equivalent',expression:'x/x',other:'1'}});assert.equal(math.structuredContent.same_domain,false);
+ const panel=await remote.callTool({name:'teaching_panel',arguments:{}});assert.ok(!panel.isError);assert.equal((await fetch(panel.structuredContent.url)).status,200);
+ assert.equal((await fetch(origin+'/learning-tools/wrong/')).status,401);
+ const html=await(await fetch(origin+scenePath)).text();const entry=html.match(/src="([^"]+index-[^"]+\.js)"/);assert.ok(entry);
+ const source=await(await fetch(new URL(entry[1],origin+scenePath))).text();assert.match(source,/__StudyMouseTools/);
+ const mouseUrl=new URL('./study-mouse-tools.js',new URL(entry[1],origin+scenePath));assert.equal((await fetch(mouseUrl)).status,200);
+ console.log(JSON.stringify({ok:true,freshInitialization:true,uniqueCredentials:true,credentialPreserved:true,localMcpTools:25,remoteMcpTools:21,authenticatedGateway:true,sharedStudyFiles:true,appendRetryDedup:true,pathIsolation:true,liveWhiteboard:true,websocketRoundTrip:true,snapshot:true,realDesktopMessageSent:false}));
 }finally{
  await local?.close().catch(()=>{});await remote?.close().catch(()=>{});ws?.terminate();
  if(child){child.kill();await Promise.race([once(child,'exit').catch(()=>{}),new Promise(r=>setTimeout(r,2000))]);}

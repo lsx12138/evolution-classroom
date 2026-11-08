@@ -9,8 +9,13 @@ test('custom subject profile shares files, protects revisions and excludes hidde
  t.after(async()=>{assert.equal(dirname(resolve(base)),resolve(tmpdir()));assert.ok(basename(base).startsWith('classroom-profile-'));await rm(base,{recursive:true,force:true});});
  for(const name of ['AGENTS.md','CURRENT.md'])await writeFile(join(base,name),'# Fixture\n');
  await writeFile(join(subject,'CURRENT.md'),'# Physics task\n');await writeFile(join(subject,'records.md'),'# Evidence\n');
- const store=new StudyStore(base,join(base,'state'),{subjects:{physics:'subjects/physics'},overviewFile:'CURRENT.md',recordFile:'records.md'});
+ await writeFile(join(base,'LEARNER.md'),'# Confirmed learner goals\n');
+ await writeFile(join(base,'LESSONS.md'),'# Teaching agreement\n');
+ const store=new StudyStore(base,join(base,'state'),{subjects:{physics:'subjects/physics'},overviewFile:'CURRENT.md',recordFile:'records.md',profileFile:'LEARNER.md',teachingModeFile:'LESSONS.md'});
  const before=await store.context('physics');assert.equal(before.subjects.physics.current.content,'# Physics task\n');
+ assert.match(before.teaching_context.profile.content,/Confirmed learner goals/);
+ await writeFile(join(base,'LEARNER.md'),'# Updated goals from learner\n');
+ const fresh=await store.context('physics');assert.match(fresh.teaching_context.profile.content,/Updated goals/);assert.notEqual(fresh.teaching_context.profile.revision,before.teaching_context.profile.revision);
  await store.update({subject:'physics',expected_revision:before.subjects.physics.current.revision,content:'# New physics task\n'});
  await assert.rejects(store.update({subject:'physics',expected_revision:before.subjects.physics.current.revision,content:'# Stale\n'}),/STALE_REVISION/);
  await store.append({subject:'physics',request_id:'physics-fixture-01',student_evidence:'Synthetic fixture',summary:'Test only',source:'desktop'});

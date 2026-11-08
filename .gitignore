@@ -3,6 +3,7 @@ state/
 logs/
 workspace/
 exports/
+teaching-kit/vendor/
 android/build/
 android/dist/
 android/signing/

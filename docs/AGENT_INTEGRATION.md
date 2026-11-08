@@ -22,7 +22,7 @@ The board's state, frozen snapshots, routing registry and private credentials li
 
 Run `npm run init`; generated `state/client-mcp.json` contains the actual Node executable and repository path. Import its `study_classroom` entry into the target client's real MCP settings, backing up the original configuration. Reload the host and verify tool discovery plus a read-only call.
 
-Local MCP has 19 tools: classroom start/join/status/leave, 11 canvas tools and 4 study tools. Remote `/mcp` uses Bearer authentication and exposes the 15 drawing/study tools. Original-chat registration is loopback-only; remote callers do not gain ownership of a desktop conversation.
+Local MCP has 25 tools: classroom start/join/status/leave, 11 canvas tools, 4 study tools and 6 teaching tools. Remote `/mcp` uses Bearer authentication and exposes the 21 drawing/study/teaching tools. Original-chat registration is loopback-only; remote callers do not gain ownership of a desktop conversation.
 
 ## Start teaching and take over
 
@@ -60,6 +60,8 @@ Live boards persist locally. `canvas_save` stores a frozen copy; saving the same
 Initialization creates empty generic study folders. `state/mobile-gateway.json` has a `study` section with `subjects`, `overviewFile`, and `recordFile`. The default subject keys are examples; change folder mappings and add subject keys for the user's curriculum. Restart the gateway after changing the profile.
 
 Read current revisions before `study_update_current`. Reuse the same `request_id` on append retries. Never interpret a connection test, generated solution or unreported progress as student learning. Hidden `_...` directories and paths outside the learning workspace are blocked.
+
+The optional learner profile and teaching agreement are configured with `study.profileFile` and `study.teachingModeFile`; new installations use `PROFILE.md` and `TEACHING.md`. Read their current revisions through `study_context`. See [TEACHING_TOOLS.md](TEACHING_TOOLS.md) for the six teaching tools, dependency setup and evidence boundaries.
 
 ## Adding a host adapter
 

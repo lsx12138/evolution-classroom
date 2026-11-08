@@ -3,8 +3,9 @@ import {StdioServerTransport} from '@modelcontextprotocol/sdk/server/stdio.js';
 import {ListToolsRequestSchema,CallToolRequestSchema} from '@modelcontextprotocol/sdk/types.js';
 import {TOOLS} from './node_modules/@ansuman-shukla/whiteboard-mcp/dist/mcp/tools.js';
 import {validate} from './node_modules/@ansuman-shukla/whiteboard-mcp/dist/mcp/schema.js';
-import {studyTools} from './workspace-store.mjs';
-import {STATE_DIR} from './lib/runtime.mjs';
+import {studyTools,StudyStore} from './workspace-store.mjs';
+import {teachingTools,createTeachingKit} from './teaching-kit/tools.mjs';
+import {STATE_DIR,runtimeConfig} from './lib/runtime.mjs';
 import {ADAPTER_NAMES,validSessionId} from './chat/session-identity.mjs';
 import {readFile,appendFile,mkdir} from 'node:fs/promises';
 import {dirname,join,resolve} from 'node:path';
@@ -23,7 +24,7 @@ const customTools=[
   {name:'classroom_status',description:'检查常驻课堂服务、已支持的原会话适配器和当前 Agent 加入的白板。未提供会话身份时列本学习工作区的注册信息，不会替调用者猜测会话。',inputSchema:{type:'object',properties:{session_id:sessionProperty,adapter:adapterProperty},additionalProperties:false},annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true}},
   {name:'classroom_leave',description:'只解除调用者自己在指定白板上的消息接课绑定；保留板书、原聊天和共用服务。',inputSchema:{type:'object',properties:{board_id:{type:'string',pattern:'^[a-z0-9][a-z0-9-]{0,63}$'},session_id:sessionProperty,adapter:adapterProperty},required:['board_id'],additionalProperties:false},annotations:{readOnlyHint:false,destructiveHint:false,idempotentHint:true}},
 ];
-export const CLASSROOM_TOOLS=[...customTools,...TOOLS.map(({name,description,inputSchema})=>({name,description:description+' 正式授课传 lesson，沿用同一课程白板。',inputSchema:{...inputSchema,properties:{...inputSchema.properties,lesson:{type:'string',description:'与课堂接课和本地 --session 一致的课程标识。'}}}})),...studyTools];
+export const CLASSROOM_TOOLS=[...customTools,...TOOLS.map(({name,description,inputSchema})=>({name,description:description+' 正式授课传 lesson，沿用同一课程白板。',inputSchema:{...inputSchema,properties:{...inputSchema.properties,lesson:{type:'string',description:'与课堂接课和本地 --session 一致的课程标识。'}}}})),...studyTools,...teachingTools];
 
 export function callerSession(args,meta,required=false){
   const adapter=args.adapter||'codex';
@@ -41,13 +42,14 @@ export function callerSession(args,meta,required=false){
 
 export function createClassroomMcp({root=ROOT,audit=true}={}){
   const state=STATE_DIR;
+  const kit=createTeachingKit({root,state:join(state,'teaching-kit')});
   async function settings(){const config=JSON.parse(await readFile(join(state,'mobile-gateway.json'),'utf8'));const token=(await readFile(join(state,'token'),'utf8')).trim();return{origin:`http://127.0.0.1:${config.port}`,token};}
   async function request(path,{payload,timeout=15000}={}){
     const {origin,token}=await settings();let response;
     try{response=await fetch(origin+path,{method:payload?'POST':'GET',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},body:payload?JSON.stringify(payload):undefined,signal:AbortSignal.timeout(timeout)});}catch{throw new Error('课堂接口暂不可达。请先调用 classroom_start，再重试当前操作。');}
     const data=await response.json();if(!response.ok)throw new Error(data.error||'课堂接口请求失败');return data;
   }
-  const server=new Server({name:'study-classroom',version:'1.1.0'},{capabilities:{tools:{}},instructions:'本机共享课堂。用户让你开始/继续授课或接手手机提问时，主动看 classroom_status、study_context，再用 classroom_join(lesson,adapter,session_id,activate:true) 接到自己的当前原对话；仅备用登记用 false，避免后台循环抢接。同一客户端的不同聊天有不同 session_id；身份必须来自当前宿主上下文，禁止猜最近或让学生代填。接手保持同一 lesson/boardId。原理：课堂桥按当前接课绑定将手机消息提交给桌面原对话，再读公开回复回手机，无需额外调用转发工具；不会迁移原聊天历史。详见 docs/AGENT_INTEGRATION.md。先读板再局部改，保护草稿；真实学习证据才记档案。Original installation tested phone messaging with Codex, PI-Desktop, MiniMax Code and Antigravity; verify this machine independently.后三款等本轮结束后再发送。Claude Desktop 另行适配，CLI 客户端不改。'});
+  const server=new Server({name:'study-classroom',version:'1.2.0'},{capabilities:{tools:{}},instructions:'教学工具箱见 docs/TEACHING_TOOLS.md：math_verify教师校验、classroom_activity完整题与反馈、teaching_graph动态图、review_cards已学卡片、teaching_panel学生面板。先读用户画像与教学约定；工具验证不算学习。 本机共享课堂。用户让你开始/继续授课或接手手机提问时，主动看 classroom_status、study_context，再用 classroom_join(lesson,adapter,session_id,activate:true) 接到自己的当前原对话；仅备用登记用 false，避免后台循环抢接。同一客户端的不同聊天有不同 session_id；身份必须来自当前宿主上下文，禁止猜最近或让学生代填。接手保持同一 lesson/boardId。原理：课堂桥按当前接课绑定将手机消息提交给桌面原对话，再读公开回复回手机，无需额外调用转发工具；不会迁移原聊天历史。详见 docs/AGENT_INTEGRATION.md。先读板再局部改，保护草稿；真实学习证据才记档案。Original installation tested phone messaging with Codex, PI-Desktop, MiniMax Code and Antigravity; verify this machine independently.后三款等本轮结束后再发送。Claude Desktop 另行适配，CLI 客户端不改。'});
   server.setRequestHandler(ListToolsRequestSchema,async()=>({tools:CLASSROOM_TOOLS}));
   server.setRequestHandler(CallToolRequestSchema,async({params})=>{
     try{
@@ -55,10 +57,12 @@ export function createClassroomMcp({root=ROOT,audit=true}={}){
       const args=params.arguments||{},invalid=validate(definition.inputSchema,args);if(invalid)throw new Error('参数错误：'+invalid);
       if(audit){await mkdir(state,{recursive:true});await appendFile(join(state,'classroom-mcp-calls.jsonl'),JSON.stringify({time:new Date().toISOString(),pid:process.pid,tool:params.name,metaKeys:Object.keys(params._meta||{})})+'\n',{mode:0o600});}
       if(params.name==='classroom_start'){
-        try{const health=await request('/health',{timeout:2000});const owned=await request('/agent/tools',{timeout:2000});if(health.ok&&health.classroomChat&&owned.tools?.length===15)return json({ok:true,alreadyRunning:true,health});}catch{}
+        try{const health=await request('/health',{timeout:2000});const owned=await request('/agent/tools',{timeout:2000});if(health.ok&&health.classroomChat&&owned.tools?.length===21)return json({ok:true,alreadyRunning:true,health});}catch{}
         try{await exec(process.execPath,[join(root,'scripts/start-local.mjs')],{windowsHide:true,timeout:45000,maxBuffer:1024*1024});}catch(error){throw new Error('课堂启动未完成：'+String(error.stderr||error.message).replace(/[a-f0-9]{64}/gi,'[private]').slice(-600));}
         return json({ok:true,health:await request('/health')});
       }
+      if(kit.handles(params.name))return json(await kit.call(params.name,args));
+      if(['study_context','study_read_file'].includes(params.name)){const config=runtimeConfig();const store=new StudyStore(config.workspace,state,config.study);return json(await store.call(params.name,args));}
       const sessionId=callerSession(args,params._meta,['classroom_join','classroom_leave'].includes(params.name));
       if(params.name==='classroom_status'){
         try{const health=await request('/health',{timeout:2500});const registration=await request('/classroom-agent/status'+(sessionId?'?sessionId='+encodeURIComponent(sessionId):''));return json({ok:true,health,callerSessionId:sessionId||null,identitySource:sessionId?'host metadata or explicit self ID':'not provided; no conversation inferred',...registration});}catch(error){return json({ok:false,availableAdapters:ADAPTER_NAMES,error:error.message});}

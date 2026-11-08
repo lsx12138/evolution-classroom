@@ -3,7 +3,7 @@ import {mkdirSync,openSync,closeSync,readFileSync} from 'node:fs';
 import {join} from 'node:path';
 import {runtimeConfig,APP_ROOT,STATE_DIR} from '../lib/runtime.mjs';
 const config=runtimeConfig(),origin=`http://127.0.0.1:${config.port}`,token=readFileSync(join(STATE_DIR,'token'),'utf8').trim();
-async function ready(){try{const r=await fetch(origin+'/agent/tools',{headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(1500)});return r.ok&&(await r.json()).tools?.length===15;}catch{return false;}}
+async function ready(){try{const r=await fetch(origin+'/agent/tools',{headers:{Authorization:'Bearer '+token},signal:AbortSignal.timeout(1500)});return r.ok&&(await r.json()).tools?.length===21;}catch{return false;}}
 if(await ready()){console.log('Classroom already running');process.exit(0);}
 try{const r=await fetch(origin+'/health',{signal:AbortSignal.timeout(1000)});if(r)throw Error('Port is already in use by another service or classroom. Choose new ports with npm run init.');}catch(e){if(!/fetch failed|abort|timeout/i.test(e.message))throw e;}
 mkdirSync(join(APP_ROOT,'logs'),{recursive:true});const out=openSync(join(APP_ROOT,'logs/gateway.log'),'a');

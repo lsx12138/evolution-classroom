@@ -14,6 +14,8 @@ import { Session } from './node_modules/@ansuman-shukla/whiteboard-mcp/dist/mcp/
 import { parseViewerPath } from './node_modules/@ansuman-shukla/whiteboard-mcp/dist/shared/protocol.js';
 import { validate } from './node_modules/@ansuman-shukla/whiteboard-mcp/dist/mcp/schema.js';
 import { StudyStore, studyTools } from './workspace-store.mjs';
+import {createTeachingKit,teachingTools} from './teaching-kit/tools.mjs';
+import {createTeachingRoutes} from './teaching-kit/server.mjs';
 import { ClassroomBridge, createClassroomRoutes } from './chat/bridge.mjs';
 
 const ROOT = dirname(fileURLToPath(import.meta.url));
@@ -33,12 +35,13 @@ export function createGateway(config) {
   const token = readFileSync(join(state, 'token'), 'utf8').trim();
   const tokenDigest = digest(token);
   const store = new StudyStore(workspace, state, config.study);
+  const kit=createTeachingKit({root:ROOT,state:join(state,'teaching-kit')});
   const defaultLesson = config.defaultLesson ?? 'classroom-demo';
   const events = [];
   const schemas = [
     ...TOOLS.map(({ name, description, inputSchema }) => ({ name, description,
       inputSchema: { ...inputSchema, properties: { ...inputSchema.properties, lesson: { type: 'string', description: '课程标识；与电脑 CLI --session 对应，每次调用沿用同一值。省略时为演示会话。' } } } })),
-    ...studyTools,
+    ...studyTools,...teachingTools,
   ];
   const matches = value => typeof value === 'string' && timingSafeEqual(digest(value), tokenDigest);
   const auth = req => matches(req.headers.authorization?.startsWith('Bearer ') ? req.headers.authorization.slice(7) : undefined);
@@ -75,6 +78,13 @@ export function createGateway(config) {
       if (!schema) throw new Error('未知工具');
       const invalid = validate(schema.inputSchema, raw);
       if (invalid) throw new Error(`参数错误：${invalid}`);
+      if(kit.handles(name)){
+        if(name==='teaching_panel'){
+          const query=new URLSearchParams({...(raw.activity_id?{activity:raw.activity_id}:{}),...(raw.graph_id?{graph:raw.graph_id}:{})});
+          return jsonResult({ok:true,url:publicOrigin+'/learning-tools/'+token+'/?'+query,note:'Private classroom tools; the active teacher is unchanged.'});
+        }
+        return jsonResult(await kit.call(name,raw));
+      }
       if (name.startsWith('study_')) return jsonResult(await store.call(name, raw));
       const { lesson: requestedLesson, ...args } = raw;
       const lesson = requestedLesson ?? lessonOverride ?? defaultLesson;
@@ -129,6 +139,7 @@ export function createGateway(config) {
     return (await response.json()).find(board => board.id === id);
   }});
   const classroomRoutes = createClassroomRoutes(classroom, {matches,auth,body,send,observed});
+  const teachingRoutes=createTeachingRoutes(kit,{matches});
   const server = http.createServer(async (req, res) => {
     try {
       if (!guard(req)) return send(res, 403, { error: '来源不允许' });
@@ -141,8 +152,9 @@ export function createGateway(config) {
           const health = await response.json();
           upstreamReady = response.ok && health.app === 'whiteboard-mcp' && health.pid === info.pid;
         } catch { }
-        return send(res, upstreamReady ? 200 : 503, { ok: upstreamReady, app: 'study-whiteboard-gateway', version: '1.3.1', tools: schemas.length, upstreamReady, classroomChat:true });
+        return send(res, upstreamReady ? 200 : 503, { ok: upstreamReady, app: 'study-whiteboard-gateway', version: '1.4.0', tools: schemas.length, upstreamReady, classroomChat:true });
       }
+      if (await teachingRoutes(req,res,url)) return;
       if (await classroomRoutes(req, res, url)) return;
       const viewer = parseViewerPath(url.pathname);
       if (viewer) {

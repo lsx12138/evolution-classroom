@@ -11,7 +11,7 @@ for(const p of [port,whiteboardPort])if(!Number.isInteger(p)||p<1024||p>65535)th
 if(port===whiteboardPort)throw Error('Gateway and whiteboard ports must differ');
 const publicOrigin=new URL(options['public-origin']||previous?.publicOrigin||`http://127.0.0.1:${port}`).origin;
 const parsed=new URL(publicOrigin);if(parsed.protocol!=='https:'&&!['127.0.0.1','localhost','[::1]'].includes(parsed.hostname))throw Error('Remote access requires HTTPS. Use your own Tailscale HTTPS origin.');
-const study=previous?.study||{subjects:{math:'subjects/math',english:'subjects/english',politics:'subjects/politics',it:'subjects/it'},overviewFile:'CURRENT.md',recordFile:'records.md'};
+const study={profileFile:'PROFILE.md',teachingModeFile:'TEACHING.md',...(previous?.study||{subjects:{math:'subjects/math',english:'subjects/english',politics:'subjects/politics',it:'subjects/it'},overviewFile:'CURRENT.md',recordFile:'records.md'})};
 function safeWorkspacePath(value){
  if(typeof value!=='string'||!value||isAbsolute(value)||value.includes('\\')||value.split('/').some(p=>p==='..'||p.startsWith('_')))throw Error('Study profile paths must stay inside the learning workspace');
  const rel=relative(workspace,resolve(workspace,value));if(rel==='..'||rel.startsWith('..'+sep)||isAbsolute(rel))throw Error('Study profile path escapes the learning workspace');
@@ -19,10 +19,13 @@ function safeWorkspacePath(value){
 if(!study.subjects||!Object.keys(study.subjects).length)throw Error('Configure at least one subject');
 for(const [key,folder]of Object.entries(study.subjects)){if(!/^[a-z][a-z0-9_-]{0,63}$/.test(key))throw Error('Invalid subject key');safeWorkspacePath(folder);}
 safeWorkspacePath(study.overviewFile);if(!/^[^/\\]+\.md$/.test(study.recordFile))throw Error('Invalid study record filename');
+for(const path of [study.profileFile,study.teachingModeFile]){safeWorkspacePath(path);if(!path.endsWith('.md'))throw Error('Teaching context files must be Markdown');}
 async function createOnly(path,content){await mkdir(resolve(path,'..'),{recursive:true});try{await writeFile(path,content,{flag:'wx'});}catch(e){if(e.code!=='EEXIST')throw e;}}
 await createOnly(join(workspace,'README.md'),'# Learning workspace\n\nYour classroom boards and study files share one local source of truth.\n');
 await createOnly(join(workspace,'AGENTS.md'),'# Classroom learning rules\n\nRead CURRENT.md and the current subject before teaching. Read the board before editing. Protect student drafts. Record only real student evidence; connection tests are not learning progress. Never reveal hidden answer directories.\n');
 await createOnly(join(workspace,study.overviewFile),'# Current learning task\n\nChoose a topic with the student. No progress has been assumed.\n');
+await createOnly(join(workspace,study.profileFile),'# Learner profile and goals\n\nConfirm the learner\'s region, examination year, goals and constraints from their own reports. Unknown skills remain unconfirmed; do not infer zero ability.\n');
+await createOnly(join(workspace,study.teachingModeFile),'# Teaching agreement\n\nThe teacher proposes a clear objective, sequence, difficulty and feedback; the learner chooses study time and workload. Use complete questions and real answers to adjust teaching. Distinguish independent work, hints, demonstrations and delayed checks. Fix specific gaps without restarting the whole subject. Tool demonstrations and prepared cards are not learning evidence.\n');
 for(const folder of Object.values(study.subjects)){
  await createOnly(join(workspace,folder,'CURRENT.md'),'# Current task\n\nAwaiting a learning goal.\n');
  await createOnly(join(workspace,folder,study.recordFile),'# Learning records\n\nAppend real student evidence here.\n');

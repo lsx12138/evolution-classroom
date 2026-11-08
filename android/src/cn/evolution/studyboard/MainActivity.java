@@ -239,14 +239,14 @@ public class MainActivity extends Activity {
             else if(which==5){Intent launch=getPackageManager().getLaunchIntentForPackage("com.ai.assistance.operit");if(launch!=null)startActivity(launch);else toast("请从手机桌面打开 Operit，再使用多开或分屏。");}
             else if(which==6)operitHelp();
             else if(which==7)showSetup("");
-            else new AlertDialog.Builder(this).setTitle("关于进化课堂 0.2.1").setMessage("原生安卓连接、菜单与文件保存；应用内使用 WebView 承载随 APK 安装的 Whiteboard MCP 0.3.5 / Excalidraw 绘图引擎。支持选中对象后添加文字批注，批注随板书共享与保存。板书和学习记录由电脑提供。\n\nWhiteboard MCP：Ansuman Shukla，MIT。源码与许可随工作区项目保留。\n\nhttps://github.com/ansuman-shukla/whiteboard-mcp").setPositiveButton("知道了",null).show();
+            else new AlertDialog.Builder(this).setTitle("关于进化课堂 0.2.2").setMessage("原生安卓连接、菜单与文件保存；应用内使用 WebView 承载随 APK 安装的 Whiteboard MCP 0.3.5 / Excalidraw 绘图引擎。支持选中对象后添加文字批注，批注随板书共享与保存。板书和学习记录由电脑提供。\n\nWhiteboard MCP：Ansuman Shukla，MIT。源码与许可随工作区项目保留。\n\nhttps://github.com/ansuman-shukla/whiteboard-mcp").setPositiveButton("知道了",null).show();
         }).show();
     }
     private void copy(String text,String note){((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("进化课堂",text));toast(note);}
     private void operitHelp(){
         if(connection==null){showSetup("");return;}
         new AlertDialog.Builder(this).setTitle("Operit 远程 MCP")
-            .setMessage("在 Operit 的 MCP 管理中连接远程服务，传输选 httpStream。连接后应有 15 个工具。\n\n服务地址：\n"+connection.origin+"/mcp\n\n下面可以分别复制地址与 Bearer Token。")
+            .setMessage("在 Operit 的 MCP 管理中连接远程服务，传输选 httpStream。连接后应有 21 个工具。\n\n服务地址：\n"+connection.origin+"/mcp\n\n下面可以分别复制地址与 Bearer Token。")
             .setPositiveButton("复制地址",(d,w)->copy(connection.origin+"/mcp","服务地址已复制"))
             .setNeutralButton("复制 Token",(d,w)->copy(connection.token,"Token 已复制，请只粘贴到自己的 Operit 配置"))
             .setNegativeButton("返回",null).show();

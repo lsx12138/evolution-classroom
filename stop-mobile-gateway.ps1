@@ -13,7 +13,7 @@ try {
     $health = Invoke-RestMethod -Uri ($proxy + '/health') -TimeoutSec 2
     $tools = Invoke-RestMethod -Uri ($proxy + '/agent/tools') -Headers @{Authorization=('Bearer ' + $accessToken)} -TimeoutSec 2
     $listener = Get-NetTCPConnection -LocalPort $config.port -State Listen -ErrorAction Stop
-    $gatewayVerified = $health.app -eq 'study-whiteboard-gateway' -and $tools.tools.Count -eq 15 -and $listener.OwningProcess -contains $recordedGatewayPid
+    $gatewayVerified = $health.app -eq 'study-whiteboard-gateway' -and $tools.tools.Count -in @(15,21) -and $listener.OwningProcess -contains $recordedGatewayPid
 } catch { }
 $stopped = 0
 $processes = Get-CimInstance Win32_Process -Filter "Name='node.exe' OR Name='powershell.exe' OR Name='tailscale.exe'"
